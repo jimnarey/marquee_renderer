@@ -7,7 +7,7 @@ import math
 from PIL import Image
 
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QDialog
+from PyQt5.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QDialog, QTextEdit, QLabel, QWidget, QLineEdit
 
 
 class MarqueeView:
@@ -64,7 +64,8 @@ class MarqueeView:
     def led_divs(inner_size, outer_width, outer_height, inner_margin_h, inner_margin_v, inner_color):
         return ''.join([
             '<div style="max-width: {0}px; max-height: {1}px;">'.format(outer_width, outer_height),
-            '<div style="margin: {0}px {1}px {0}px {1}px; min-width: {2}px; min-height: {2}px; background-color: {3}">'.format(inner_margin_h, inner_margin_v, inner_size, inner_color),
+            '<div style="margin: {0}px {1}px {0}px {1}px; min-width: {2}px; min-height: {2}px; background-color: {3}; '
+            'border-radius: 50%;">'.format(inner_margin_h, inner_margin_v, inner_size, inner_color),
             '</div>',
             '</div>',
         ])
@@ -115,19 +116,62 @@ class MarqueeView:
         return MarqueeView.html_base('<p>Invalid Image</p>')
 
 
-class OperationDialog(QDialog):
+options = (
+    {'name': 'num_leds_h', 'ctrl_type': QLineEdit, 'help': 'HELP'},
+    {'name': 'num_leds_v', 'ctrl_type': QLineEdit, 'help': 'HELP'},
+    {'name': 'LED_size', 'ctrl_type': QLineEdit, 'help': 'HELP'},
+    {'name': 'led_pitch_h', 'ctrl_type': QLineEdit, 'help': 'HELP'},
+    {'name': 'led_pitch_w', 'ctrl_type': QLineEdit, 'help': 'HELP'},
+    {'name': 'display_width', 'ctrl_type': QLineEdit, 'help': 'HELP'}
+)
 
-    def __init__(self, parent=None):
+
+class RenderDialog(QDialog):
+
+    @staticmethod
+    def title_from_name(name):
+        return name.replace('_', ' ').title()
+
+    def __init__(self, opts, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Marquee Renderer')
         self.main_layout = QHBoxLayout()
-        self.controls_layout = QVBoxLayout()
+        self.opts_layout = QVBoxLayout()
+        self.text_boxes = {}
         self.view_port = QWebEngineView()
         marquee_view = MarqueeView('marquees/1942_s.png', 128, 32, 2.5, 4, 4)
         self.view_port.setHtml(marquee_view.html)
-        self.main_layout.addLayout(self.controls_layout)
+        self._create_opt_inputs(opts)
+        self.main_layout.addLayout(self.opts_layout)
         self.main_layout.addWidget(self.view_port)
         self.setLayout(self.main_layout)
+        # self.setLayout(self.opts_layout)
+
+    def _create_user_input_widget(self, *args):
+        layout = QHBoxLayout()
+        widget = QWidget()
+        widget.setLayout(layout)
+        for arg in args:
+            layout.addWidget(arg)
+        self.opts_layout.addWidget(widget)
+
+    def _create_title_label(self, opt):
+        title_label = QLabel()
+        title_label.setToolTip(opt['help'])
+        title_label.setFixedWidth(100)
+        title_label.setText(RenderDialog.title_from_name(opt['name']))
+        return title_label
+
+    def _create_input_field(self, opt):
+        widgets = [self._create_title_label(opt)]
+        field = opt['ctrl_type']()
+        self.text_boxes[opt['name']] = field
+        widgets.append(field)
+        self._create_user_input_widget(*widgets)
+
+    def _create_opt_inputs(self, opts):
+        for opt in opts:
+            self._create_input_field(opt)
 
 
 if __name__ == '__main__':
@@ -136,6 +180,6 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     # controller = Controller()
     # controller.show_main_window()
-    dialog = OperationDialog()
+    dialog = RenderDialog(options)
     dialog.show()
     sys.exit(app.exec_())
